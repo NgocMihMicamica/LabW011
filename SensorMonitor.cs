@@ -1,6 +1,10 @@
 namespace CampusSafetyHub;
 
-// Subject quan ly observer, doc cam bien va phat canh bao
+// Da hoan thien o phien ban v3:
+// 1. Chan dang ky trung lap (Khong cho cung mot observer dang ky hai lan).
+// 2. Ho tro Detach de huy dang ky observer.
+// 3. Duyet tren ban sao observers.ToArray() de tranh loi 'Collection was modified' khi observer detach giua chung.
+// 4. Co lap loi: boc try-catch de mot observer loi khong lam anh huong den cac observer khac.
 public sealed class SensorMonitor
 {
     private readonly List<IAlertObserver> observers = new();
@@ -9,32 +13,41 @@ public sealed class SensorMonitor
     {
         ArgumentNullException.ThrowIfNull(observer);
 
-        // Bug 3: Khong kiem tra trung lap! Neu dang ky 2 lan se bi them 2 lan
-        // TODO: can chan khong cho add trung
-        observers.Add(observer);
+        // Da sua: Chan khong cho cung 1 observer dang ky 2 lan
+        if (!observers.Contains(observer))
+        {
+            observers.Add(observer);
+        }
     }
 
     public void Detach(IAlertObserver observer)
     {
-        observers.Remove(observer);
+        if (observer != null)
+        {
+            observers.Remove(observer);
+        }
     }
 
     public void CheckSensor(string sensorName, ISensor sensor)
     {
+        ArgumentNullException.ThrowIfNull(sensor);
+
         double value = sensor.ReadValue();
 
+        // Xac dinh muc do dua tren nguong quy uoc
         string? severity = value switch
         {
             >= 70 => "CRITICAL",
             >= 50 => "WARNING",
-            _ => null
+            _ => null // Duoi 50% la binh thuong, khong phat canh bao
         };
 
         if (severity is null)
         {
-            return; // Duoi 50% la binh thuong, khong phat canh bao
+            return;
         }
 
+        // AlertEvent la record bat bien, dam bao khong observer nao sua duoc du lieu goc
         var alertEvent = new AlertEvent(
             sensorName,
             value,
@@ -47,12 +60,22 @@ public sealed class SensorMonitor
 
     private void Notify(AlertEvent alertEvent)
     {
-        // Bug 4: Duyet truc tiep tren observers ma khong dung ToArray()
-        // Neu co observer nao goi Detach trong khi duyet thi se bi Exception (Collection was modified)
-        // Dong thoi chua bat try-catch: neu 1 observer loi se lam chet cac observer sau
-        foreach (IAlertObserver observer in observers)
+        // Da sua: Duyet tren ban sao ToArray() de mot observer co the tu huy dang ky (detach)
+        // trong khi dang nhan thong bao ma khong lam hong vong lap foreach.
+        foreach (IAlertObserver observer in observers.ToArray())
         {
-            observer.Update(alertEvent);
+            try
+            {
+                observer.Update(alertEvent);
+            }
+            catch (Exception ex)
+            {
+                // Da sua: Mot observer bi loi khong duoc lam hong cac observer khac
+                Console.WriteLine($"[MONITOR WARNING] Observer '{observer.GetType().Name}' gap loi khi nhan canh bao: {ex.Message}");
+            }
         }
     }
+
+    // Phuong thuc ho tro kiem thu so luong observer hien tai
+    public int ObserverCount => observers.Count;
 }
