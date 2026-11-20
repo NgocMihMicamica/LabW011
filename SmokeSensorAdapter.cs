@@ -1,6 +1,8 @@
 namespace CampusSafetyHub;
 
-// Adapter giup bien doi cam bien cu sang chuan ISensor
+// Da sua o phien ban v2:
+// - Chuyen doi dung thang do 0..1000 thanh 0..100.0 bang cach chia cho 10.0
+// - Tranh loi chia so nguyen va dam bao do chinh xac so thuc
 public sealed class SmokeSensorAdapter : ISensor
 {
     private readonly LegacySmokeDetector legacy;
@@ -12,10 +14,8 @@ public sealed class SmokeSensorAdapter : ISensor
 
     public double ReadValue()
     {
-        // Bug 1: Nham thang do chia cho 100 thay vi chia 10.0
-        // Gia tri 735 bi bien thanh 7.35 thay vi 73.5%
-        // TODO: can kiem tra lai xem chia 10 hay chia 100
-        return legacy.GetSmokeLevel() / 100.0;
+        // Da sua: chia cho 10.0 thay vi chia 100.0 (vi du: 735 / 10.0 = 73.5%)
+        return legacy.GetSmokeLevel() / 10.0;
     }
 
     public string GetUnit() => "% smoke";
