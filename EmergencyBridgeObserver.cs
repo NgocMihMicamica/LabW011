@@ -1,6 +1,8 @@
 namespace CampusSafetyHub;
 
-// Bridge chuyen tiep canh bao sang cho Mediator
+// Da sua o phien ban v2:
+// - Chi kich hoat Mediator xu ly khan cap khi muc do dat nguong "CRITICAL" (>= 70%)
+// - Muc WARNING (50..69.9%) chi dung o muc phat thong bao, khong kich hoat chuong bao chay
 public sealed class EmergencyBridgeObserver : IAlertObserver
 {
     private readonly IEmergencyMediator mediator;
@@ -12,10 +14,8 @@ public sealed class EmergencyBridgeObserver : IAlertObserver
 
     public void Update(AlertEvent alertEvent)
     {
-        // Bug 2: Kich hoat khan cap ca khi chi la WARNING!
-        // Le ra chi duoc kich hoat khi severity == "CRITICAL"
-        // TODO: can kiem tra lai xem WARNING co can bat coi bao chay khong?
-        if (alertEvent.Severity != null)
+        // Da sua: chi khi su kien la CRITICAL moi kich hoat ung pho khan cap
+        if (alertEvent.Severity == "CRITICAL")
         {
             mediator.Notify("FIRE_DETECTED");
         }
